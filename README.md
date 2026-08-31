@@ -4,10 +4,12 @@ Deployment-neutral contracts between Domainry Runtime and the Metadata owner.
 
 ## Package layout
 
-- The root package is the stable Metadata `Binding` entrypoint.
-- `persistence` owns definition snapshots and transaction-aware, source-owned Metadata DML contracts.
+- The root package is the stable Metadata business contract and `Binding`
+  entrypoint. It exposes definition, localization, dictionary and authorized
+  projection ports without exposing HTTP handlers or implementation services.
 - `modulehost` describes the database, dialect, and host migration registrar borrowed by an embedded Metadata module.
 
-Metadata owns its table names and DML while participating in the host transaction through bounded executor interfaces exposed by `persistence`. Every database continues to use the host-owned `_schema_migrations` ledger.
+Metadata owns its table names, transactions and DML. Every database continues
+to use the host-owned `_schema_migrations` ledger.
 
 Run `go test ./...` before publishing an immutable SDK version.
