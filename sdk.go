@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	"github.com/domainry/domainry-foundation/modulecapability"
 )
 
 const ProtocolVersionV1 = "domainry-metadata-protocol-v1"
@@ -75,6 +77,7 @@ func (e *Error) Unwrap() error {
 }
 
 type Binding interface {
+	modulecapability.Binding
 	Descriptor() Descriptor
 	Definitions() Definitions
 	Localization() Localization
