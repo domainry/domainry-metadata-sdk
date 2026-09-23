@@ -2,57 +2,34 @@ package metadatasdk
 
 import (
 	"context"
-	"encoding/json"
+
+	shareddefinition "github.com/domainry/domainry-foundation/definition"
 )
 
 const (
-	DefinitionOwnerMetadata     = "metadata"
-	DefinitionOwnerIdentity     = "identity"
-	DefinitionOwnerWorkflow     = "workflow"
-	DefinitionOwnerAutomation   = "automation"
-	DefinitionOwnerIntegration  = "integration"
-	DefinitionOwnerReport       = "report"
-	DefinitionOwnerAgent        = "agent"
-	DefinitionOwnerScheduler    = "scheduler"
-	DefinitionOwnerNotification = "notification"
-	DefinitionOwnerLifecycle    = "lifecycle"
+	DefinitionOwnerMetadata     = shareddefinition.OwnerMetadata
+	DefinitionOwnerIdentity     = shareddefinition.OwnerIdentity
+	DefinitionOwnerWorkflow     = shareddefinition.OwnerWorkflow
+	DefinitionOwnerAutomation   = shareddefinition.OwnerAutomation
+	DefinitionOwnerIntegration  = shareddefinition.OwnerIntegration
+	DefinitionOwnerReport       = shareddefinition.OwnerReport
+	DefinitionOwnerAgent        = shareddefinition.OwnerAgent
+	DefinitionOwnerScheduler    = shareddefinition.OwnerScheduler
+	DefinitionOwnerNotification = shareddefinition.OwnerNotification
+	DefinitionOwnerLifecycle    = shareddefinition.OwnerLifecycle
 
-	// DefinitionNoCurrentVersion is the compare-and-swap token required when
-	// publishing a definition that must not already exist.
-	DefinitionNoCurrentVersion = "none"
+	DefinitionNoCurrentVersion = shareddefinition.NoCurrentVersion
 )
 
-type Definition struct {
-	Owner            string          `json:"owner"`
-	ResourceType     string          `json:"resource_type"`
-	ResourceKey      string          `json:"resource_key"`
-	CurrentVersionID string          `json:"current_version_id"`
-	Status           string          `json:"status"`
-	ObjectKey        string          `json:"object_key,omitempty"`
-	Name             string          `json:"name,omitempty"`
-	Payload          json.RawMessage `json:"payload"`
-	SchemaVersion    string          `json:"schema_version,omitempty"`
-	SchemaHash       string          `json:"schema_hash,omitempty"`
-	SourceKind       string          `json:"source_kind,omitempty"`
-	SourceID         string          `json:"source_id,omitempty"`
-	PublishedAt      string          `json:"published_at,omitempty"`
-	PublishedBy      string          `json:"published_by,omitempty"`
-	DisabledAt       string          `json:"disabled_at,omitempty"`
-	DisabledBy       string          `json:"disabled_by,omitempty"`
-	CreatedAt        string          `json:"created_at,omitempty"`
-	UpdatedAt        string          `json:"updated_at,omitempty"`
-}
-
-type DefinitionQuery struct {
-	Owner        string
-	CrossOwner   bool
-	ResourceType string
-	SourceID     string
-}
-
-type DefinitionSnapshot struct {
-	Definitions []Definition
-}
+type Error = shareddefinition.Error
+type Definition = shareddefinition.Definition
+type DefinitionQuery = shareddefinition.Query
+type DefinitionSnapshot = shareddefinition.Snapshot
+type DefinitionPublishCommand = shareddefinition.PublishCommand
+type DefinitionPublishResult = shareddefinition.PublishResult
+type DefinitionDisableCommand = shareddefinition.DisableCommand
+type DefinitionVersionQuery = shareddefinition.VersionQuery
+type DefinitionVersion = shareddefinition.Version
 
 type Definitions interface {
 	List(context.Context, DefinitionQuery) ([]Definition, error)
@@ -75,55 +52,9 @@ type Projection interface {
 	Sync(context.Context, ProjectionSnapshot) error
 }
 
-type DefinitionPublishCommand struct {
-	Owner                    string
-	ResourceType             string
-	ResourceKey              string
-	ExpectedCurrentVersionID string
-	SchemaVersion            string
-	SchemaHash               string
-	ObjectKey                string
-	Name                     string
-	Payload                  json.RawMessage
-	SourceKind               string
-	SourceID                 string
-	PublishedBy              string
-}
-
-type DefinitionPublishResult struct {
-	Definition       Definition
-	CurrentVersionID string
-}
-
-type DefinitionDisableCommand struct {
-	Owner                    string
-	ResourceType             string
-	ResourceKey              string
-	ExpectedCurrentVersionID string
-	DisabledBy               string
-}
-
-type DefinitionVersionQuery struct {
-	Owner         string
-	ResourceType  string
-	ResourceKey   string
-	VersionID     string
-	SchemaVersion string
-}
-
-type DefinitionVersion struct {
-	ID            string          `json:"id"`
-	Owner         string          `json:"owner"`
-	ResourceType  string          `json:"resource_type"`
-	ResourceKey   string          `json:"resource_key"`
-	SchemaVersion string          `json:"schema_version"`
-	SchemaHash    string          `json:"schema_hash"`
-	Payload       json.RawMessage `json:"payload"`
-	CreatedAt     string          `json:"created_at"`
-}
-
-// DefinitionStore is the deployment-neutral host port for current reads,
-// source-owned replacement, CAS publication, disable and immutable history.
+// DefinitionStore is the SDK-facing Definition port. Its projection snapshot
+// retains Metadata localization for Metadata itself; ordinary modules adapt a
+// Foundation store with AdaptDefinitionStore and cannot write localization.
 type DefinitionStore interface {
 	Definitions
 	ReplaceSourceSnapshot(context.Context, ProjectionSnapshot) error
@@ -131,3 +62,46 @@ type DefinitionStore interface {
 	Disable(context.Context, DefinitionDisableCommand) error
 	GetVersion(context.Context, DefinitionVersionQuery) (DefinitionVersion, bool, error)
 }
+
+func AdaptDefinitionStore(store shareddefinition.StorePort) DefinitionStore {
+	return definitionStoreAdapter{store: store}
+}
+
+type definitionStoreAdapter struct{ store shareddefinition.StorePort }
+
+func (a definitionStoreAdapter) List(ctx context.Context, query DefinitionQuery) ([]Definition, error) {
+	return a.store.List(ctx, query)
+}
+
+func (a definitionStoreAdapter) Get(ctx context.Context, owner, resourceType, key string) (Definition, bool, error) {
+	return a.store.Get(ctx, owner, resourceType, key)
+}
+
+func (a definitionStoreAdapter) Snapshot(ctx context.Context, query DefinitionQuery) (DefinitionSnapshot, error) {
+	return a.store.Snapshot(ctx, query)
+}
+
+func (a definitionStoreAdapter) ReplaceSourceSnapshot(ctx context.Context, snapshot ProjectionSnapshot) error {
+	if len(snapshot.LocalizedText) != 0 {
+		return &Error{StatusCode: 400, Code: "metadata.localized_text_requires_metadata_module"}
+	}
+	return a.store.ReplaceSourceSnapshot(ctx, shareddefinition.SourceSnapshot{
+		Owner: snapshot.Owner, SchemaVersion: snapshot.SchemaVersion,
+		SourceKind: snapshot.SourceKind, SourceID: snapshot.SourceID,
+		Definitions: snapshot.Definitions,
+	})
+}
+
+func (a definitionStoreAdapter) Publish(ctx context.Context, command DefinitionPublishCommand) (DefinitionPublishResult, error) {
+	return a.store.Publish(ctx, command)
+}
+
+func (a definitionStoreAdapter) Disable(ctx context.Context, command DefinitionDisableCommand) error {
+	return a.store.Disable(ctx, command)
+}
+
+func (a definitionStoreAdapter) GetVersion(ctx context.Context, query DefinitionVersionQuery) (DefinitionVersion, bool, error) {
+	return a.store.GetVersion(ctx, query)
+}
+
+var _ DefinitionStore = definitionStoreAdapter{}

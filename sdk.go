@@ -48,32 +48,6 @@ func (d Descriptor) Validate() error {
 	return nil
 }
 
-type Error struct {
-	StatusCode int
-	Code       string
-	Cause      error
-}
-
-func (e *Error) Error() string {
-	if e == nil {
-		return ""
-	}
-	if strings.TrimSpace(e.Code) != "" {
-		return e.Code
-	}
-	if e.Cause != nil {
-		return e.Cause.Error()
-	}
-	return "metadata.error"
-}
-
-func (e *Error) Unwrap() error {
-	if e == nil {
-		return nil
-	}
-	return e.Cause
-}
-
 type Binding interface {
 	Descriptor() Descriptor
 	Definitions() Definitions
