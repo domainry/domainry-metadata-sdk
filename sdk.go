@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-
-	"github.com/domainry/domainry-foundation/modulecapability"
 )
 
 const ProtocolVersionV1 = "domainry-metadata-protocol-v1"
@@ -36,7 +34,7 @@ func (d Descriptor) Validate() error {
 	if d.Mode != DeploymentModeModule {
 		return fmt.Errorf("Metadata deployment mode %q is unsupported", d.Mode)
 	}
-	required := map[string]bool{"definitions": false, "localization": false, "dictionaries": false, "projection": false}
+	required := map[string]bool{"definitions": false, "definition_store": false, "localization": false, "dictionaries": false, "projection": false}
 	for _, capability := range d.Capabilities {
 		if _, ok := required[strings.TrimSpace(capability)]; ok {
 			required[strings.TrimSpace(capability)] = true
@@ -77,9 +75,9 @@ func (e *Error) Unwrap() error {
 }
 
 type Binding interface {
-	modulecapability.Binding
 	Descriptor() Descriptor
 	Definitions() Definitions
+	DefinitionStore() DefinitionStore
 	Localization() Localization
 	Dictionaries() Dictionaries
 	Projection() Projection
