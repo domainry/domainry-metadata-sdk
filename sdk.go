@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	"github.com/domainry/domainry-metadata-sdk/modulehost"
 )
 
 const ProtocolVersionV1 = "domainry-metadata-protocol-v1"
@@ -46,6 +48,13 @@ func (d Descriptor) Validate() error {
 		}
 	}
 	return nil
+}
+
+// Factory is selected by the outer application composition root. Embedded
+// Metadata receives only host infrastructure capabilities and remains the
+// sole owner of its schema and migrations.
+type Factory interface {
+	OpenModule(context.Context, ApplicationRef, modulehost.Host) (Binding, error)
 }
 
 type Binding interface {
