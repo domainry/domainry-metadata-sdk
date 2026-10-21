@@ -83,7 +83,7 @@ func (a definitionStoreAdapter) Snapshot(ctx context.Context, query DefinitionQu
 
 func (a definitionStoreAdapter) ReplaceSourceSnapshot(ctx context.Context, snapshot ProjectionSnapshot) error {
 	if len(snapshot.LocalizedText) != 0 {
-		return &Error{StatusCode: 400, Code: "metadata.localized_text_requires_metadata_module"}
+		return &Error{Kind: shareddefinition.KindBadRequest, Code: "metadata.localized_text_requires_metadata_module"}
 	}
 	return a.store.ReplaceSourceSnapshot(ctx, shareddefinition.SourceSnapshot{
 		Owner: snapshot.Owner, SchemaVersion: snapshot.SchemaVersion,

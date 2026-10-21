@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	shareddefinition "github.com/domainry/domainry-foundation/definition"
 	"github.com/domainry/domainry-metadata-sdk/modulehost"
 )
 
@@ -18,7 +19,7 @@ type ApplicationRef struct{ InstallationID string }
 
 func (r ApplicationRef) Validate() error {
 	if strings.TrimSpace(r.InstallationID) == "" {
-		return &Error{StatusCode: 500, Code: "metadata.installation_identity_required"}
+		return &Error{Kind: shareddefinition.KindInternal, Code: "metadata.installation_identity_required"}
 	}
 	return nil
 }
