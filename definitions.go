@@ -22,6 +22,18 @@ const (
 )
 
 type Error = shareddefinition.Error
+type ErrorKind = shareddefinition.ErrorKind
+
+const (
+	ErrorKindBadRequest  = shareddefinition.KindBadRequest
+	ErrorKindForbidden   = shareddefinition.KindForbidden
+	ErrorKindNotFound    = shareddefinition.KindNotFound
+	ErrorKindConflict    = shareddefinition.KindConflict
+	ErrorKindRateLimited = shareddefinition.KindRateLimited
+	ErrorKindUnavailable = shareddefinition.KindUnavailable
+	ErrorKindInternal    = shareddefinition.KindInternal
+)
+
 type Definition = shareddefinition.Definition
 type DefinitionQuery = shareddefinition.Query
 type DefinitionSnapshot = shareddefinition.Snapshot
